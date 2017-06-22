@@ -1,0 +1,42 @@
+version: '3.2'
+
+services:
+  netdata:
+    # https://hub.docker.com/r/titpetric/netdata/
+    image: titpetric/netdata:1.6
+    container_name: netdata
+    hostname: 'netdata.docker'
+    deploy:
+      endpoint_mode: dnsrr
+    cap_add:
+      - SYS_PTRACE
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      # for host username lookup
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      # for container name lookup
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  prom:
+    # https://github.com/prometheus/prometheus/releases
+    image: prom/prometheus:v1.7.1
+    container_name: netdata-prom
+    hostname: 'netdata-prom.docker'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - 9090:9090
+    deploy:
+      resources:
+        limits:
+          memory: 150m
+    command: [
+      '-config.file=/etc/prometheus/prometheus.yml',
+      '-storage.local.path=/prometheus',
+      '-web.console.libraries=/usr/share/prometheus/console_libraries',
+      '-web.console.templates=/usr/share/prometheus/consoles',
+      # "As a rule of thumb, you should have at least 50% headroom in physical memory over the configured heap size."
+      '-storage.local.target-heap-size=100000000',
+    ]
